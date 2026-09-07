@@ -1,13 +1,22 @@
+options(repos = c(CRAN = "https://cloud.r-project.org"))
 ####################################### WELCOME TO THE SHINY APP ##################################
 ####################################### from Sandra K. (2023) #####################################
 ###################################################################################################
 
 ####################################### Scripts ###################################################
 
-source("R/generator.R")
 source("R/percentile.R")
 
+linear <- function(x, slope, intercept) slope * x + intercept
+expo <- function(x, a, b) a * exp(x * b)
+
 ####################################### Libraries #################################################
+
+if (!requireNamespace("reflimR.expand", quietly = TRUE)) {
+
+  warning("reflimR.expand package not found. Please install it.")
+}
+library(reflimR.expand)
 
 if("DT" %in% rownames(installed.packages())){
   library(DT)} else{
@@ -84,6 +93,7 @@ ui <- dashboardPage(
                    hr(),
                    sliderInput("ill_factor", "Pathological cases [%]:", 0, 0.5, 0),
                    sliderInput("mu_factor_ill", "Factor added to mean (µ) for the pathological cases:", 0, 1000, 1),
+                   numericInput("lod", "Limit of Detection (LOD, optional):", value = NA, min = 0, step = 0.1),
                    hr(),
                    selectInput(
                      "family_generator",
@@ -338,63 +348,80 @@ server <- function(input, output){
   data_generator <- reactive({
     # Composition of users settings
     if(input$trend_mu == "linear"){
-      formula_mu <- paste("linear(i,",input$slope_mu,",",input$intercept_mu,")")}
+      formula_mu <- paste("linear(x,",input$slope_mu,",",input$intercept_mu,")")}
     
     if(input$trend_mu == "exponentially"){
-      formula_mu <- paste("expo(i,", input$a_mu,",",input$b_mu,")")}
+      formula_mu <- paste("expo(x,", input$a_mu,",",input$b_mu,")")}
     
     if(input$trend_sigma == "linear"){
-      formula_sigma <- paste("linear(i,",input$slope_sigma,",",input$intercept_sigma,")")}
+      formula_sigma <- paste("linear(x,",input$slope_sigma,",",input$intercept_sigma,")")}
     
     if(input$trend_sigma == "exponentially"){
-      formula_sigma <- paste("expo(i,", input$a_sigma,",",input$b_sigma,")")}
+      formula_sigma <- paste("expo(x,", input$a_sigma,",",input$b_sigma,")")}
     
     if(input$trend_nu == "linear"){
-      formula_nu <- paste("linear(i,",input$slope_nu,",",input$intercept_nu,")")}
+      formula_nu <- paste("linear(x,",input$slope_nu,",",input$intercept_nu,")")}
     
     if(input$trend_nu == "exponentially"){
-      formula_nu <- paste("expo(i,", input$a_nu,",",input$b_nu,")")}
+      formula_nu <- paste("expo(x,", input$a_nu,",",input$b_nu,")")}
     
     if(input$trend_tau == "linear"){
-      formula_tau <- paste("linear(i,",input$slope_tau,",",input$intercept_tau,")")}
+      formula_tau <- paste("linear(x,",input$slope_tau,",",input$intercept_tau,")")}
     
     if(input$trend_tau == "exponentially"){
-      formula_tau <- paste("expo(i,", input$a_tau,",",input$b_tau,")")}
+      formula_tau <- paste("expo(x,", input$a_tau,",",input$b_tau,")")}
     
     progress <- shiny::Progress$new()
     progress$set(message = "Generate new data...", detail = "", value = 2)
-    
-    generate_data <- make_data(input$age_generator, input$age_generator_steps,input$family_generator, 
-                               input$n_, input$text, formula_mu, formula_sigma,
-                               formula_nu, formula_tau, input$ill_factor, input$mu_factor_ill)
+
+    lod_val <- if (!is.null(input$lod) && !is.na(input$lod)) input$lod else NULL
+
+    generate_data <- reflimR.expand::generate_data(
+      age = input$age_generator,
+      age_steps = input$age_generator_steps,
+      distribution = input$family_generator,
+      n_ = input$n_,
+      name_value = input$text,
+      formula_mu = formula_mu,
+      formula_sigma = formula_sigma,
+      formula_nu = formula_nu,
+      formula_tau = formula_tau,
+      ill_factor = input$ill_factor,
+      mu_factor_ill = input$mu_factor_ill,
+      lod = lod_val
+    )
     on.exit(progress$close())
     generate_data
   })
   
   ##################################### Output ####################################################
   ##################################### Data-Generator ############################################
-  
+
   output$table_generator <- DT::renderDataTable({
-    data_generator <- data_generator()
-    colnames(data_generator) <- c("Age [years]","Age [days]", "Value", "Id", "Sex", "Origin", "Analyte")
-    
-    DT::datatable(data_generator, caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;',
-      'Table: Dataset'), extensions = 'Buttons', options = list(dom = 'Blfrtip', pageLength = 15, buttons = c('copy', 'csv', 'pdf', 'print')))
+    data_gen <- data_generator()
+    colnames(data_gen) <- c("Age [years]", "Age [days]", "Value", "Below LOD", "Id", "Sex", "Origin", "Analyte")
+
+    DT::datatable(data_gen, caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;',
+                                                              'Table: Dataset'), extensions = 'Buttons', options = list(dom = 'Blfrtip', pageLength = 15, buttons = c('copy', 'csv', 'pdf', 'print')))
   })
-  
+
   output$summary <- renderPrint({
     summary(data_generator())
   })
-  
+
   output$plot_generator <- renderPlot({
-    plot(data_generator()[,3] ~ data_generator()[,2], xlab = "Age [Days]", ylab =  paste0(data_generator()[1,7]," [",input$text_unit,"]"), 
-         pch = 20, cex = 0.75, col = "grey")
+    df <- data_generator()
+    plot(df$VALUE ~ df$AGE_DAYS,
+         xlab = "Age [Days]",
+         ylab = paste0(df$ANALYTE[1], " [", input$text_unit, "]"),
+         pch = 20, cex = 0.75, col = ifelse(df$IS_BELOW_LOD, "red", "grey"))
   })
   
   output$settings <- DT::renderDataTable({
     data_settings <- t(data.frame("Age" = input$age_generator,
                                   "Age steps" = input$age_generator_steps,
                                   "Distribution" = input$family_generator,
+                                  "LOD" = ifelse(is.null(input$lod) || is.na(input$lod), "None", input$lod),
                                   "Number of observations" = input$n_,
                                   "Name" = input$text,
                                   "Unit" = input$text_unit,
@@ -456,6 +483,7 @@ server <- function(input, output){
       data_settings <- t(data.frame("Age" = input$age_generator,
                                     "Age steps" = input$age_generator_steps,
                                     "Distribution" = input$family_generator,
+                                    "LOD" = ifelse(is.null(input$lod) || is.na(input$lod), "None", input$lod),
                                     "Number of observations" = input$n_,
                                     "Name" = input$text,
                                     "Unit" = input$text_unit,
@@ -483,7 +511,7 @@ server <- function(input, output){
       colnames(data_settings) <- c("Setting")
       write.csv2(data_settings, file)
     })
-  
+
   output$download_plot <- downloadHandler(
     filename = function(){
       paste0("Generator_",input$family_generator,"_",input$age_generator,".eps")
@@ -491,7 +519,8 @@ server <- function(input, output){
     content = function(file) {
       setEPS()
       postscript(file)
-      plot(data_generator()[,3]~data_generator()[,2], xlab = "Age [Days]", ylab =  paste0(data_generator()[1,7]," [",input$text_unit,"]"), 
+      df <- data_generator()
+      plot(df$VALUE ~ df$AGE_DAYS, xlab = "Age [Days]", ylab = paste0(df$ANALYTE[1], " [", input$text_unit, "]"),
            pch = 20, cex = 0.75, col = "lightgrey")
       dev.off()
     })
