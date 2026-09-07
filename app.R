@@ -13,25 +13,24 @@ expo <- function(x, a, b) a * exp(x * b)
 ####################################### Libraries #################################################
 
 if (!requireNamespace("reflimR.expand", quietly = TRUE)) {
-
   warning("reflimR.expand package not found. Please install it.")
 }
 library(reflimR.expand)
 
 if("DT" %in% rownames(installed.packages())){
   library(DT)} else{
-    install.packages("DT")
-    library(DT)}
+  install.packages("DT")
+  library(DT)}
 
 if("gamlss" %in% rownames(installed.packages())){
   library(gamlss)} else{
-    install.packages("gamlss")
-    library(gamlss)}
+  install.packages("gamlss")
+  library(gamlss)}
 
 if("shinydashboard" %in% rownames(installed.packages())){
   library(shinydashboard)} else{
-    install.packages("shinydashboard")
-    library(shinydashboard)}
+  install.packages("shinydashboard")
+  library(shinydashboard)}
 
 ####################################### User Interface ############################################
 
@@ -54,10 +53,10 @@ ui <- dashboardPage(
                    )),
   dashboardBody(tabItems(
     ### MainPanel - Generator ###
-    
+
     tabItem(
       tabName = "generator",
-      
+
       p(
         strong(
           "This Shiny App is a generator to create age-dependent data from labor analytes!"
@@ -78,7 +77,7 @@ ui <- dashboardPage(
         a("AdRI", href = "https://github.com/SandraKla/AdRI"),
         ". The data is saved with no sex, with unique values and the station is named Generator."
       ),
-      
+
       fluidRow(
         column(width = 6,
                fluidRow(
@@ -115,7 +114,7 @@ ui <- dashboardPage(
                    downloadButton("download_plot", "Plot"),
                    downloadButton("download_data", "Data")
                  ),
-                 
+
                  box(
                    ######################## Mu Simulation ###################################
                    title = tagList(shiny::icon("gear"), "Settings for the distribution parameters"),
@@ -123,7 +122,7 @@ ui <- dashboardPage(
                    status = "primary",
                    solidHeader = TRUE,
                    collapsible = TRUE,
-                   
+
                    selectInput(
                      "trend_mu",
                      "Trend for µ:",
@@ -140,7 +139,7 @@ ui <- dashboardPage(
                      div(style = "display:inline-block", numericInput("b_mu", "B:", 0))
                    ),
                    hr(),
-                   
+
                    ######################## Sigma Simulation ################################
                    selectInput(
                      "trend_sigma",
@@ -157,14 +156,14 @@ ui <- dashboardPage(
                      div(style = "display:inline-block", numericInput("a_sigma", "A:", 1)),
                      div(style = "display:inline-block", numericInput("b_sigma", "B:", 0))
                    ),
-                   
+
                    conditionalPanel(
                      condition = "input.family_generator == 'BCCG' ||
                                         input.family_generator == 'BCPE' ||
                                         input.family_generator == 'BCT'",
                      hr()
                    ),
-                   
+
                    ######################## Nu Simulation ###################################
                    conditionalPanel(
                      condition = "input.family_generator == 'BCCG' ||
@@ -176,7 +175,7 @@ ui <- dashboardPage(
                        c(Linear = "linear", Exponentially = "exponentially")
                      )
                    ),
-                   
+
                    conditionalPanel(
                      condition = "(input.family_generator == 'BCCG' ||
                                         input.family_generator == 'BCPE' ||
@@ -185,8 +184,8 @@ ui <- dashboardPage(
                      div(style = "display:inline-block", numericInput("intercept_nu", "Intercept:", 1)),
                      div(style = "display:inline-block", numericInput("slope_nu", "Slope:", 0))
                    ),
-                   
-                   
+
+
                    conditionalPanel(
                      condition = "(input.family_generator == 'BCCG' ||
                                         input.family_generator == 'BCPE' ||
@@ -195,11 +194,11 @@ ui <- dashboardPage(
                      div(style = "display:inline-block", numericInput("a_nu", "A:", 1)),
                      div(style = "display:inline-block", numericInput("b_nu", "B:", 0))
                    ),
-                   
-                   
+
+
                    conditionalPanel(condition = "input.family_generator == 'BCPE' ||
                                         input.family_generator == 'BCT'", hr()),
-                   
+
                    ######################## Tau Simulation ##################################
                    conditionalPanel(
                      condition = "input.family_generator == 'BCPE' ||
@@ -210,7 +209,7 @@ ui <- dashboardPage(
                        c(Linear = "linear", Exponentially = "exponentially")
                      )
                    ),
-                   
+
                    conditionalPanel(
                      condition = "(input.family_generator == 'BCPE' ||
                                         input.family_generator == 'BCT') &&
@@ -218,7 +217,7 @@ ui <- dashboardPage(
                      div(style = "display:inline-block", numericInput("intercept_tau", "Intercept:", 1)),
                      div(style = "display:inline-block", numericInput("slope_tau", "Slope:", 0))
                    ),
-                   
+
                    conditionalPanel(
                      condition = "(input.family_generator == 'BCPE' ||
                                         input.family_generator == 'BCT') &&
@@ -251,11 +250,11 @@ ui <- dashboardPage(
         )
       )
     ),
-    
+
     ### Percentile ###
     tabItem(
       tabName = "percentile",
-      
+
       p(
         strong(
           "This Shiny App is a generator to create age-dependent data from labor analytes!"
@@ -269,7 +268,7 @@ ui <- dashboardPage(
         a("AdRI", href = "https://github.com/SandraKla/AdRI"),
         ". The data is saved with no sex, with unique values and the station is named Generator!"
       ),
-      
+
       box(
         title = tagList(shiny::icon("gear"), "Settings"),
         status = "primary",
@@ -283,7 +282,7 @@ ui <- dashboardPage(
         uiOutput("dataset_file"),
         actionButton('reset', 'Reset Input', icon = icon("trash")),
         hr(),
-        
+
         numericInput(
           "n_percentile",
           "Number of observations:",
@@ -297,7 +296,7 @@ ui <- dashboardPage(
         downloadButton("download_percentileplot", "Plot"),
         downloadButton("download_precentile", "Data")
       ),
-      
+
       box(
         title = tagList(shiny::icon("chart-line"), "Plot"),
         status = "warning",
@@ -312,24 +311,24 @@ ui <- dashboardPage(
 ####################################### Server ####################################################
 
 server <- function(input, output){
-  
+
   options(shiny.plot.res=128)
   options(shiny.sanitize.errors = TRUE)
-  
+
   ##################################### Reactive Expressions ######################################
-  
+
   values <- reactiveValues(
     upload_state = NULL
   )
-  
+
   observeEvent(input$dataset_file1, {
     values$upload_state <- 'uploaded'
   })
-  
+
   observeEvent(input$reset, {
     values$upload_state <- 'reset'
   })
-  
+
   dataset_input <- reactive({
     if (is.null(values$upload_state)) {
       return(NULL)
@@ -339,44 +338,53 @@ server <- function(input, output){
       return(NULL)
     }
   })
-  
+
   output$dataset_file <- renderUI({
     input$reset ## Create a dependency with the reset button
     fileInput('dataset_file1', label = NULL)
   })
-  
+
   data_generator <- reactive({
     # Composition of users settings
     if(input$trend_mu == "linear"){
       formula_mu <- paste("linear(x,",input$slope_mu,",",input$intercept_mu,")")}
-    
+
     if(input$trend_mu == "exponentially"){
       formula_mu <- paste("expo(x,", input$a_mu,",",input$b_mu,")")}
-    
+
     if(input$trend_sigma == "linear"){
       formula_sigma <- paste("linear(x,",input$slope_sigma,",",input$intercept_sigma,")")}
-    
+
     if(input$trend_sigma == "exponentially"){
       formula_sigma <- paste("expo(x,", input$a_sigma,",",input$b_sigma,")")}
-    
+
     if(input$trend_nu == "linear"){
       formula_nu <- paste("linear(x,",input$slope_nu,",",input$intercept_nu,")")}
-    
+
     if(input$trend_nu == "exponentially"){
       formula_nu <- paste("expo(x,", input$a_nu,",",input$b_nu,")")}
-    
+
     if(input$trend_tau == "linear"){
       formula_tau <- paste("linear(x,",input$slope_tau,",",input$intercept_tau,")")}
-    
+
     if(input$trend_tau == "exponentially"){
       formula_tau <- paste("expo(x,", input$a_tau,",",input$b_tau,")")}
-    
+
     progress <- shiny::Progress$new()
     progress$set(message = "Generate new data...", detail = "", value = 2)
 
     lod_val <- if (!is.null(input$lod) && !is.na(input$lod)) input$lod else NULL
 
-    generate_data <- reflimR.expand::generate_data(
+    # Backward compatibility wrapper for function naming in reflimR.expand
+    gen_func <- if (exists("generate_data", where = asNamespace("reflimR.expand"), mode = "function")) {
+      reflimR.expand::generate_data
+    } else if (exists("make_data", where = asNamespace("reflimR.expand"), mode = "function")) {
+      reflimR.expand::make_data
+    } else {
+      stop("Neither 'generate_data' nor 'make_data' found in reflimR.expand.")
+    }
+
+    res_data <- gen_func(
       age = input$age_generator,
       age_steps = input$age_generator_steps,
       distribution = input$family_generator,
@@ -391,18 +399,27 @@ server <- function(input, output){
       lod = lod_val
     )
     on.exit(progress$close())
-    generate_data
+    res_data
   })
-  
+
   ##################################### Output ####################################################
   ##################################### Data-Generator ############################################
 
   output$table_generator <- DT::renderDataTable({
     data_gen <- data_generator()
-    colnames(data_gen) <- c("Age [years]", "Age [days]", "Value", "Below LOD", "Id", "Sex", "Origin", "Analyte")
 
-    DT::datatable(data_gen, caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;',
-                                                              'Table: Dataset'), extensions = 'Buttons', options = list(dom = 'Blfrtip', pageLength = 15, buttons = c('copy', 'csv', 'pdf', 'print')))
+    if ("IS_BELOW_LOD" %in% names(data_gen) || ncol(data_gen) == 8) {
+      colnames(data_gen) <- c("Age [years]", "Age [days]", "Value", "Below LOD", "Id", "Sex", "Origin", "Analyte")
+    } else {
+      colnames(data_gen) <- c("Age [years]", "Age [days]", "Value", "Id", "Sex", "Origin", "Analyte")
+    }
+
+    DT::datatable(
+      data_gen,
+      caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;', 'Table: Dataset'),
+      extensions = 'Buttons',
+      options = list(dom = 'Blfrtip', pageLength = 15, buttons = c('copy', 'csv', 'pdf', 'print'))
+    )
   })
 
   output$summary <- renderPrint({
@@ -411,12 +428,27 @@ server <- function(input, output){
 
   output$plot_generator <- renderPlot({
     df <- data_generator()
-    plot(df$VALUE ~ df$AGE_DAYS,
-         xlab = "Age [Days]",
-         ylab = paste0(df$ANALYTE[1], " [", input$text_unit, "]"),
-         pch = 20, cex = 0.75, col = ifelse(df$IS_BELOW_LOD, "red", "grey"))
+
+    col_vec <- if ("IS_BELOW_LOD" %in% names(df) && !all(is.na(df$IS_BELOW_LOD))) {
+      ifelse(df$IS_BELOW_LOD, "red", "grey")
+    } else {
+      "grey"
+    }
+
+    y_val <- if ("VALUE" %in% names(df)) df$VALUE else df[, 3]
+    x_val <- if ("AGE_DAYS" %in% names(df)) df$AGE_DAYS else df[, 2]
+    analyte_name <- if ("ANALYTE" %in% names(df)) df$ANALYTE[1] else df[1, ncol(df)]
+
+    plot(
+      y_val ~ x_val,
+      xlab = "Age [Days]",
+      ylab = paste0(analyte_name, " [", input$text_unit, "]"),
+      pch = 20,
+      cex = 0.75,
+      col = col_vec
+    )
   })
-  
+
   output$settings <- DT::renderDataTable({
     data_settings <- t(data.frame("Age" = input$age_generator,
                                   "Age steps" = input$age_generator_steps,
@@ -431,49 +463,49 @@ server <- function(input, output){
                                   "Trend of tau" = input$trend_tau,
                                   "Linear (mu): Intercept of mu" = input$intercept_mu,
                                   "Linear (mu): Slope of mu" = input$slope_mu,
-                                  "Exponentially (mu): A of mu" = input$a_mu, 
+                                  "Exponentially (mu): A of mu" = input$a_mu,
                                   "Exponentially (mu): B of mu" = input$b_mu,
                                   "Linear (sigma): Intercept of sigma" = input$intercept_sigma,
                                   "Linear (sigma): Slope of sigma" = input$slope_sigma,
-                                  "Exponentially (sigma): A of sigma" = input$a_sigma, 
+                                  "Exponentially (sigma): A of sigma" = input$a_sigma,
                                   "Exponentially (sigma): B of sigma" = input$b_sigma,
                                   "Linear (nu): Intercept of nu" = input$intercept_nu,
                                   "Linear (nu): Slope of nu" = input$slope_nu,
-                                  "Exponentially (nu): A of nu" = input$a_nu, 
+                                  "Exponentially (nu): A of nu" = input$a_nu,
                                   "Exponentially (nu): B of nu" = input$b_nu,
                                   "Linear (tau): Intercept of tau" = input$intercept_tau,
                                   "Linear (tau): Slope of tau" = input$slope_tau,
-                                  "Exponentially (tau): A of tau" = input$a_tau, 
-                                  "Exponentially (tau): B of tau" = input$b_tau, 
+                                  "Exponentially (tau): A of tau" = input$a_tau,
+                                  "Exponentially (tau): B of tau" = input$b_tau,
                                   check.names = FALSE))
     colnames(data_settings) <- c("Setting")
     DT::datatable(data_settings, extensions = 'Buttons', caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;','Table: Settings'),
                   options = list(dom = 'Blfrtip', pageLength = 30, buttons = c('copy', 'csv', 'pdf', 'print')))
   })
-  
+
   ################################ Generator (Percentile) ##########################
-  
+
   output$percentile <- renderPlot({
     progress <- shiny::Progress$new()
     progress$set(message = "Generate new data...", detail = "", value = 2)
-    
+
     if(is.null(dataset_input())){
       percentile_function(input$data, input$n_percentile, input$text_percentile, input$text_unit_percentile)
     } else{
       percentile_function(dataset_input()[["datapath"]], input$n_percentile, input$text_percentile, input$text_unit_percentile)
     }
     on.exit(progress$close())
-  }) 
+  })
 
   ################################ Download ########################################
-  
+
   output$download_data <- downloadHandler(
     filename = function(){
       paste0("Generator_",input$family_generator,"_",input$age_generator,"_",input$age_generator_steps ,"_", Sys.Date(),".csv")
     },
     content = function(file) {
       write.csv2(data_generator(), file, row.names = FALSE)
-  })
+    })
 
   output$download_settings <- downloadHandler(
     filename = function(){
@@ -493,19 +525,19 @@ server <- function(input, output){
                                     "Trend of tau" = input$trend_tau,
                                     "Linear: Intercept of mu" = input$intercept_mu,
                                     "Linear: Slope of mu" = input$slope_mu,
-                                    "Exponentially: A of mu" = input$a_mu, 
+                                    "Exponentially: A of mu" = input$a_mu,
                                     "Exponentially: B of mu" = input$b_mu,
                                     "Linear: Intercept of sigma" = input$intercept_sigma,
                                     "Linear: Slope of sigma" = input$slope_sigma,
-                                    "Exponentially: A of sigma" = input$a_sigma, 
+                                    "Exponentially: A of sigma" = input$a_sigma,
                                     "Exponentially: B of sigma" = input$b_sigma,
                                     "Linear: Intercept of nu" = input$intercept_nu,
                                     "Linear: Slope of nu" = input$slope_nu,
-                                    "Exponentially: A of nu" = input$a_nu, 
+                                    "Exponentially: A of nu" = input$a_nu,
                                     "Exponentially: B of nu" = input$b_nu,
                                     "Linear: Intercept of tau" = input$intercept_tau,
                                     "Linear: Slope of tau" = input$slope_tau,
-                                    "Exponentially: A of tau" = input$a_tau, 
+                                    "Exponentially: A of tau" = input$a_tau,
                                     "Exponentially: B of tau" = input$b_tau,
                                     check.names = FALSE))
       colnames(data_settings) <- c("Setting")
@@ -524,7 +556,7 @@ server <- function(input, output){
            pch = 20, cex = 0.75, col = "lightgrey")
       dev.off()
     })
-  
+
   output$download_precentile <- downloadHandler(
     filename = function(){
       paste0("Percentile_", Sys.Date(),".csv")
@@ -532,7 +564,7 @@ server <- function(input, output){
     content = function(file) {
       progress <- shiny::Progress$new()
       progress$set(message = "Save new data...", detail = "", value = 2)
-      
+
       if(is.null(dataset_input())){
         table_percentile <- percentile_function(input$data, input$n_percentile, input$text_percentile, input$text_unit_percentile)
       } else{
@@ -540,8 +572,8 @@ server <- function(input, output){
       }
       on.exit(progress$close())
       write.csv2(table_percentile, file, row.names = FALSE)
-  })
-  
+    })
+
   output$download_percentileplot <- downloadHandler(
     filename = function(){
       paste0("Percentile_", Sys.Date(), ".eps")
@@ -551,7 +583,7 @@ server <- function(input, output){
       postscript(file)
       progress <- shiny::Progress$new()
       progress$set(message = "Save new data...", detail = "", value = 2)
-      
+
       if(is.null(dataset_input())){
         percentile_function(input$data, input$n_percentile, input$text_percentile, input$text_unit_percentile)
       } else{
