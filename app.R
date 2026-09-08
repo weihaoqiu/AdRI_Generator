@@ -10,6 +10,14 @@ source("R/percentile.R")
 linear <- function(x, slope, intercept) slope * x + intercept
 expo <- function(x, a, b) a * exp(x * b)
 
+# Helper function to parse comma-separated string to numeric vector safely
+parse_num_vec <- function(text_val, default_val) {
+  if (is.null(text_val) || trimws(text_val) == "") return(default_val)
+  parsed <- as.numeric(trimws(unlist(strsplit(text_val, ","))))
+  if (any(is.na(parsed)) || length(parsed) == 0) return(default_val)
+  return(parsed)
+}
+
 ####################################### Libraries #################################################
 
 if (!requireNamespace("reflimR.expand", quietly = TRUE)) {
@@ -49,7 +57,11 @@ ui <- dashboardPage(
                      ### Sidebar - Percentile ###
                      menuItem("Percentile",
                               tabName = "percentile",
-                              icon = icon("folder"))
+                              icon = icon("folder")),
+                     ### Sidebar - Synthetic Data (Issue #40) ###
+                     menuItem("Synthetic Data",
+                              tabName = "synthetic",
+                              icon = icon("flask"))
                    )),
   dashboardBody(tabItems(
     ### MainPanel - Generator ###
@@ -77,6 +89,7 @@ ui <- dashboardPage(
         a("AdRI", href = "https://github.com/SandraKla/AdRI"),
         ". The data is saved with no sex, with unique values and the station is named Generator."
       ),
+
 
       fluidRow(
         column(width = 6,
@@ -303,6 +316,69 @@ ui <- dashboardPage(
         solidHeader = TRUE,
         collapsible = TRUE,
         plotOutput("percentile", height = "500px")
+    )
+  ),
+    ### Tab 3: Synthetic Data (Issue #40) ###
+    tabItem(
+      tabName = "synthetic",
+      p(
+        strong("Generator for non-age-dependent synthetic laboratory datasets!"),
+        br(), br(),
+        "Generate mixed populations (e.g. non-diseased reference and pathological subgroups) using defined sample sizes and reference intervals."
+      ),
+      fluidRow(
+        column(
+          width = 4,
+          box(
+            title = tagList(shiny::icon("gear"), "Parameters"),
+            status = "primary",
+            width = 12,
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            textInput("syn_n", "Sample sizes (comma-separated):", value = "100, 800, 100"),
+            textInput("syn_ll", "Lower limits (LL, comma-separated):", value = "10, 12, 15"),
+            textInput("syn_ul", "Upper limits (UL, comma-separated):", value = "13, 16, 20"),
+            checkboxInput("syn_lognormal", "Log-normal distribution", value = FALSE),
+            hr(),
+            sliderInput("syn_bins", "Histogram bins:", min = 10, max = 150, value = 50),
+            checkboxInput("syn_boxplot", "Add boxplot on top", value = TRUE),
+            checkboxInput("syn_legend", "Show legend", value = TRUE),
+            hr(),
+            textInput("syn_analyte", "Analyte Name:", value = "Analyte"),
+            textInput("syn_unit", "Unit:", value = "mmol/L"),
+            hr(),
+            downloadButton("download_syn_plot", "Plot"),
+            downloadButton("download_syn_data", "Data")
+          )
+        ),
+        column(
+          width = 8,
+          box(
+            title = tagList(shiny::icon("chart-area"), "Distribution Plot"),
+            status = "warning",
+            width = 12,
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            plotOutput("plot_synthetic", height = "450px")
+          ),
+          box(
+            title = tagList(shiny::icon("table"), "Subgroup Statistics"),
+            status = "warning",
+            width = 12,
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            DT::dataTableOutput("table_synthetic_stats")
+          ),
+          box(
+            title = tagList(shiny::icon("database"), "Generated Dataset"),
+            status = "warning",
+            width = 12,
+            solidHeader = TRUE,
+            collapsible = TRUE,
+            collapsed = TRUE,
+            DT::dataTableOutput("table_synthetic_data")
+          )
+        )
       )
     )
   ))
@@ -311,9 +387,128 @@ ui <- dashboardPage(
 ####################################### Server ####################################################
 
 server <- function(input, output){
+  # Backward compatibility wrapper for synthetic data generation function
+  get_synthetic_func <- function() {
+    if (exists("synthetic.data", where = asNamespace("reflimR.expand"), mode = "function")) {
+      return(reflimR.expand::synthetic.data)
+    } else if (exists("synthetic_data", where = asNamespace("reflimR.expand"), mode = "function")) {
+      return(reflimR.expand::synthetic_data)
+    } else {
+      stop("Neither 'synthetic.data' nor 'synthetic_data' found in reflimR.expand.")
+    }
+  }
 
   options(shiny.plot.res=128)
   options(shiny.sanitize.errors = TRUE)
+
+  ##################################### Tab 3 Reactive Logic (Issue #40) ##########################
+
+  synthetic_res <- reactive({
+    n_vec <- parse_num_vec(input$syn_n, c(100, 800, 100))
+    ll_vec <- parse_num_vec(input$syn_ll, c(10, 12, 15))
+    ul_vec <- parse_num_vec(input$syn_ul, c(13, 16, 20))
+
+    req(length(n_vec) == length(ll_vec) && length(ll_vec) == length(ul_vec))
+
+    reflimR.expand::synthetic.data(
+      n = n_vec,
+      ll = ll_vec,
+      ul = ul_vec,
+      lognormal = input$syn_lognormal,
+      hist.bins = input$syn_bins,
+      plot.it = FALSE
+    )
+  })
+
+  synthetic_dataset <- reactive({
+    res <- synthetic_res()
+    data.frame(
+      Value = res$values,
+      Analyte = input$syn_analyte,
+      Unit = input$syn_unit,
+      Origin = "Synthetic"
+    )
+  })
+
+  output$plot_synthetic <- renderPlot({
+    n_vec <- parse_num_vec(input$syn_n, c(100, 800, 100))
+    ll_vec <- parse_num_vec(input$syn_ll, c(10, 12, 15))
+    ul_vec <- parse_num_vec(input$syn_ul, c(13, 16, 20))
+
+    validate(
+      need(length(n_vec) == length(ll_vec) && length(ll_vec) == length(ul_vec),
+           "Input vectors for 'n', 'll', and 'ul' must have the same length (comma-separated).")
+    )
+
+    syn_func <- get_synthetic_func()
+    syn_func(
+      n = n_vec,
+      ll = ll_vec,
+      ul = ul_vec,
+      lognormal = input$syn_lognormal,
+      hist.bins = input$syn_bins,
+      plot.it = TRUE,
+      add.boxplot = input$syn_boxplot,
+      plot.legend = input$syn_legend,
+      main = paste0("Synthetic Data: ", input$syn_analyte),
+      xlab = paste0(input$syn_analyte, " [", input$syn_unit, "]")
+    )
+  })
+
+  output$table_synthetic_stats <- DT::renderDataTable({
+    stats_df <- synthetic_res()$stats
+    DT::datatable(
+      stats_df,
+      caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;', 'Table: Subgroup Parameters'),
+      options = list(dom = 't', paging = FALSE)
+    )
+  })
+
+  output$table_synthetic_data <- DT::renderDataTable({
+    DT::datatable(
+      synthetic_dataset(),
+      caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;', 'Table: Synthetic Dataset'),
+      extensions = 'Buttons',
+      options = list(dom = 'Blfrtip', pageLength = 15, buttons = c('copy', 'csv', 'print'))
+    )
+  })
+
+  output$download_syn_data <- downloadHandler(
+    filename = function() {
+      paste0("Synthetic_Data_", input$syn_analyte, "_", Sys.Date(), ".csv")
+    },
+    content = function(file) {
+      write.csv2(synthetic_dataset(), file, row.names = FALSE)
+    }
+  )
+
+  output$download_syn_plot <- downloadHandler(
+    filename = function() {
+      paste0("Synthetic_Plot_", input$syn_analyte, "_", Sys.Date(), ".eps")
+    },
+    content = function(file) {
+      setEPS()
+      postscript(file)
+      n_vec <- parse_num_vec(input$syn_n, c(100, 800, 100))
+      ll_vec <- parse_num_vec(input$syn_ll, c(10, 12, 15))
+      ul_vec <- parse_num_vec(input$syn_ul, c(13, 16, 20))
+
+      syn_func <- get_synthetic_func()
+      syn_func(
+        n = n_vec,
+        ll = ll_vec,
+        ul = ul_vec,
+        lognormal = input$syn_lognormal,
+        hist.bins = input$syn_bins,
+        plot.it = TRUE,
+        add.boxplot = input$syn_boxplot,
+        plot.legend = input$syn_legend,
+        main = paste0("Synthetic Data: ", input$syn_analyte),
+        xlab = paste0(input$syn_analyte, " [", input$syn_unit, "]")
+      )
+      dev.off()
+    }
+  )
 
   ##################################### Reactive Expressions ######################################
 
