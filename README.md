@@ -52,7 +52,7 @@ All required packages are downloaded when starting this app or imported if they 
 ## Updates & Integrations
 - **Direct Dependency on reflimR.expand**: The internal generation functions are now imported directly from the reflimR.expand package instead of duplicating code locally.
 - **Limit of Detection (LOD)**: Added an optional lod parameter via numericInput in the Generator interface. When specified, generated data points below this threshold are marked (Below LOD) in the dataset and visually highlighted in red on the plot.
-
+- **Synthetic Data Generation (Non-age-dependent)**: Added a third tab to generate non-age-dependent synthetic laboratory datasets using `reflimR.expand::synthetic.data`. Supports multiple subgroups with custom sample sizes, reference intervals, distribution selections (Normal / Log-normal), distribution plots with boxplots, and CSV/EPS export.
 ## Contact
 
 You are welcome to:
