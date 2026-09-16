@@ -1,7 +1,7 @@
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 ####################################### WELCOME TO THE SHINY APP ##################################
-####################################### from Sandra K. (2023) #####################################
-###################################################################################################
+####################################### from Sandra K. (2026) #####################################
+####################################### Coauthor: Weihao Qiu ######################################
 
 ####################################### Scripts ###################################################
 
@@ -71,7 +71,7 @@ ui <- dashboardPage(
 
       p(
         strong(
-          "This Shiny App is a generator to create age-dependent data from labor analytes!"
+          "Generator to create age-dependent data from labor analytes!"
         ),
         br(),
         br(),
@@ -270,7 +270,7 @@ ui <- dashboardPage(
 
       p(
         strong(
-          "This Shiny App is a generator to create age-dependent data from labor analytes!"
+          "Generator to create age-dependent data from labor analytes!"
         ),
         br(),
         br(),
@@ -318,7 +318,7 @@ ui <- dashboardPage(
         plotOutput("percentile", height = "500px")
     )
   ),
-    ### Tab 3: Synthetic Data (Issue #40) ###
+    ### Tab 3: Synthetic Data ###
     tabItem(
       tabName = "synthetic",
       p(
