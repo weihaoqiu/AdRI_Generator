@@ -324,7 +324,14 @@ ui <- dashboardPage(
       p(
         strong("Generator for non-age-dependent synthetic laboratory datasets!"),
         br(), br(),
-        "Generate mixed populations (e.g. non-diseased reference and pathological subgroups) using defined sample sizes and reference intervals."
+        "Generate mixed populations (non-diseased reference and pathological subgroups) using defined sample sizes and reference intervals.",
+        tags$ul(
+          tags$li(strong("First value:"), " Sample size of the pathological subgroup with lower values (e.g. 100)."),
+          tags$li(strong("Middle value:"), " Sample size of the non-diseased reference population (e.g. 800)."),
+          tags$li(strong("Last value:"), " Sample size of the pathological subgroup with higher values (e.g. 100).")
+        ),
+        p(style = "color: #555; font-size: 0.9em; margin-top: 5px;",
+          "Note: The comma-separated lists for sample sizes, lower limits (LL), and upper limits (UL) must have the exact same number of values.")
       ),
       fluidRow(
         column(
@@ -335,7 +342,11 @@ ui <- dashboardPage(
             width = 12,
             solidHeader = TRUE,
             collapsible = TRUE,
-            textInput("syn_n", "Sample sizes (comma-separated):", value = "100, 800, 100"),
+            textInput(
+              "syn_n",
+              "Sample sizes (Pathol. Low, Reference, Pathol. High):",
+              value = "100, 800, 100"
+            ),
             textInput("syn_ll", "Lower limits (LL, comma-separated):", value = "10, 12, 15"),
             textInput("syn_ul", "Upper limits (UL, comma-separated):", value = "13, 16, 20"),
             checkboxInput("syn_lognormal", "Log-normal distribution", value = FALSE),
