@@ -1,7 +1,7 @@
 options(repos = c(CRAN = "https://cloud.r-project.org"))
 ####################################### WELCOME TO THE SHINY APP ##################################
-####################################### from Sandra K. (2026) #####################################
-####################################### Coauthor: Weihao Qiu ######################################
+####################################### from Sandra K. (2023) #####################################
+###################################################################################################
 
 ####################################### Scripts ###################################################
 
@@ -71,7 +71,7 @@ ui <- dashboardPage(
 
       p(
         strong(
-          "Generator to create age-dependent data from labor analytes!"
+          "This Shiny App is a generator to create age-dependent data from labor analytes!"
         ),
         br(),
         br(),
@@ -270,7 +270,7 @@ ui <- dashboardPage(
 
       p(
         strong(
-          "Generator to create age-dependent data from labor analytes!"
+          "This Shiny App is a generator to create age-dependent data from labor analytes!"
         ),
         br(),
         br(),
@@ -316,9 +316,9 @@ ui <- dashboardPage(
         solidHeader = TRUE,
         collapsible = TRUE,
         plotOutput("percentile", height = "500px")
-    )
-  ),
-    ### Tab 3: Synthetic Data ###
+      )
+    ),
+    ### Tab 3: Synthetic Data (Issue #40) ###
     tabItem(
       tabName = "synthetic",
       p(
@@ -412,7 +412,7 @@ server <- function(input, output){
   options(shiny.plot.res=128)
   options(shiny.sanitize.errors = TRUE)
 
-  ##################################### Tab 3 Reactive Logic (Issue #40) ##########################
+  ##################################### Tab 3 Reactive Logic (Issue #13 Fix) #####################
 
   synthetic_res <- reactive({
     n_vec <- parse_num_vec(input$syn_n, c(100, 800, 100))
@@ -421,7 +421,8 @@ server <- function(input, output){
 
     req(length(n_vec) == length(ll_vec) && length(ll_vec) == length(ul_vec))
 
-    reflimR.expand::synthetic.data(
+    syn_func <- get_synthetic_func()
+    syn_func(
       n = n_vec,
       ll = ll_vec,
       ul = ul_vec,
@@ -433,8 +434,22 @@ server <- function(input, output){
 
   synthetic_dataset <- reactive({
     res <- synthetic_res()
+    req(res)
+
+    vals <- if (is.list(res) && "values" %in% names(res)) {
+      res$values
+    } else if (is.list(res) && "data" %in% names(res)) {
+      res$data
+    } else if (is.numeric(res)) {
+      res
+    } else if (is.data.frame(res)) {
+      if ("Value" %in% names(res)) res$Value else res[[1]]
+    } else {
+      unlist(res)
+    }
+
     data.frame(
-      Value = res$values,
+      Value = vals,
       Analyte = input$syn_analyte,
       Unit = input$syn_unit,
       Origin = "Synthetic"
@@ -467,7 +482,25 @@ server <- function(input, output){
   })
 
   output$table_synthetic_stats <- DT::renderDataTable({
-    stats_df <- synthetic_res()$stats
+    res <- synthetic_res()
+    req(res)
+
+    stats_df <- if (is.list(res) && "stats" %in% names(res) && !is.null(res$stats)) {
+      res$stats
+    } else if (is.list(res) && "parameters" %in% names(res) && !is.null(res$parameters)) {
+      res$parameters
+    } else {
+      n_vec <- parse_num_vec(input$syn_n, c(100, 800, 100))
+      ll_vec <- parse_num_vec(input$syn_ll, c(10, 12, 15))
+      ul_vec <- parse_num_vec(input$syn_ul, c(13, 16, 20))
+      data.frame(
+        Subgroup = paste("Subgroup", seq_along(n_vec)),
+        N = n_vec,
+        LL = ll_vec,
+        UL = ul_vec
+      )
+    }
+
     DT::datatable(
       stats_df,
       caption = htmltools::tags$caption(style = 'caption-side: bottom; text-align: center;', 'Table: Subgroup Parameters'),
